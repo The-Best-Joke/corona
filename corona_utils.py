@@ -286,4 +286,6 @@ def countries_progression():
 				Mexico = np.array(mexico_array))
 
 	df = pd.DataFrame(dict([ (k,pd.Series(v)) for k,v in data.items() ]))
+	df.index.name = "day"
+	df.index += 1
 	return df
