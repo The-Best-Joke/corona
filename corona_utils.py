@@ -22,7 +22,6 @@ cases_colombia = pd.read_csv("Casos.csv", 							\
 					.drop('ID de caso', 1)
 
 cases_worldwide = pd.read_csv("confirmed-global.csv")
-cities = ["Estambul"]
 
 def places():
 	"""Handles the logic for determining whether the location is a Nan, multiple
@@ -88,22 +87,9 @@ def add_possible_origins(possible_places, locations):
 	for place in list_possible_places:
 		place = unidecode.unidecode(place.strip())
 		if place in possible_places:
-			if place in cities:
-				resolve_city_keys(possible_places, place)
-			else:
-				possible_places[place] += 1
+			possible_places[place] += 1
 		else:
-			if place in cities:
-				resolve_city_keys(possible_places, place)
-			else:
-				possible_places[place] = 1
-
-def resolve_city_keys(list_places, i):
-	if i == 'Estambul':
-		if "Turquia" in list_places:
-			list_places["Turquia"] += 1
-		else:
-			list_places["Turquia"] = 1
+			possible_places[place] = 1
 
 def add_origin(places, location):
 	"""Adds the location to the places dictionary.
