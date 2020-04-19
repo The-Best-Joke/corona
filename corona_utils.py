@@ -1,0 +1,267 @@
+from datetime import datetime, date, timedelta
+from variables.first_dates import colombia_first_date
+import pandas as pd
+import math
+import unidecode
+import re
+
+dateparse = lambda x : datetime.strptime(x[:10], '%Y-%m-%d')
+
+cases_colombia = pd.read_csv("Casos.csv", 							\
+						parse_dates = ["Fecha de diagnóstico"], 	\
+						date_parser=dateparse)						\
+					.rename(										\
+		 				columns={"Fecha de diagnóstico": "date",	\
+		 			 			 "Ciudad de ubicación" : "city", 	\
+		 			 			 "Departamento" : "dept", 			\
+		 			 			 "Atención" : "locTreatment", 		\
+		 			 			 "Edad" : "age", 					\
+		 			 			 "Sexo" : "sex", 					\
+		 			 			 "Tipo*" : "type", 					\
+		 			 			 "País de procedencia" : "origin"})	\
+					.drop('ID de caso', 1)
+
+cases_worldwide = pd.read_csv("confirmed-global.csv")
+cities = ["Estambul"]
+
+def places():
+	"""Handles the logic for determining whether the location is a Nan, multiple
+	locations, or a straight-forward single location.
+
+    Returns
+    ----------
+    places : Dictionary
+    	The dictionary containing the countries of origin and the number of
+    	cases
+    possible_places : Dictionary
+    	The dictionary containing the possible countries of origin and the
+    	number of cases
+    """
+	places = {}
+	possible_places = {}
+	for location in cases_colombia.origin.tolist():
+		resolve_places(places, possible_places, location)
+	return places, possible_places
+
+def resolve_places(places, possible_places, location):
+	"""Handles the logic for determining whether the location is a Nan, multiple
+	locations, or a straight-forward single location.
+
+    Parameters
+    ----------
+    places : Dictionary
+    	The dictionary containing the countries of origin and the number of
+    	cases
+    possible_places : Dictionary
+    	The dictionary containing the possible countries of origin and the
+    	number of cases
+    locations : String OR Nan
+    	A Nan, or, in the case of a string, either a list of locations or a
+    	single location
+    """
+	if isinstance(location, float):
+		resolve_nan(possible_places)
+	elif "-" in location:
+		add_possible_origins(possible_places, location)
+	else:
+		add_origin(places, location)
+
+def resolve_nan(possible_places):
+	if "Nan" in possible_places:
+			possible_places["Nan"] += 1
+	else:
+		possible_places["Nan"] = 1
+
+def add_possible_origins(possible_places, locations):
+	"""Handles the logic for dealing with locations values with more than one
+	possible origin country.
+
+    Parameters
+    ----------
+    possible_places : Dictionary
+    	The dictionary containing the possible countries of origin and the
+    	number of cases. 
+    locations : String
+    	The list of possible locations of origin.
+    """
+	list_possible_places = locations.split("-")
+	for place in list_possible_places:
+		place = unidecode.unidecode(place.strip())
+		if place in possible_places:
+			if place in cities:
+				resolve_city_keys(possible_places, place)
+			else:
+				possible_places[place] += 1
+		else:
+			if place in cities:
+				resolve_city_keys(possible_places, place)
+			else:
+				possible_places[place] = 1
+
+def resolve_city_keys(list_places, i):
+	if i == 'Estambul':
+		if "Turquia" in list_places:
+			list_places["Turquia"] += 1
+		else:
+			list_places["Turquia"] = 1
+
+def add_origin(places, location):
+	"""Adds the location to the places dictionary.
+
+    Parameters
+    ----------
+    places : Dictionary
+    	The dictionary containing the countries of origin and the number of
+    	cases 
+    location : String
+    	The string value of the location
+    """
+	location = unidecode.unidecode(location)
+	if location in places:
+		places[location] += 1
+	else:
+		places[location] = 1
+
+def fill_blank_days(cpd):
+	"""Adds missing days to the cases per day dataframe.
+
+    For all missing days, the date is filled with a corresponding 0 value.
+
+    Parameters
+    ----------
+    cpd : Dataframe
+    	A Dataframe object that contains the total cases per day
+
+    Returns
+    ----------
+    cpd : Dataframe
+    	A Dataframe that contains the total number of cases per age group in
+    	Colombia
+    """
+	first_date = cpd.iloc[0]
+	last_date = cpd.iloc[-1]
+	date_range = pd.date_range(first_date.name, last_date.name)
+	return cpd.reindex(date_range, fill_value=0)
+
+def cases_per_day():
+	"""Returns a Dataframe object `cpc` of the number of cases per day in
+	Colombia.
+
+	Returns
+    ----------
+    cpd : Dataframe
+    	A Dataframe that contains the total number of cases per day in Colombia
+    """
+	cpd = pd.DataFrame(cases_colombia.date.value_counts()).sort_index()\
+										  .rename(columns={"date" : "cases"})
+	cpd = fill_blank_days(cpd)
+	cpd.index.name = "date"
+	return cpd
+
+def cases_per_city():
+	"""Returns a Dataframe object `cpc` of the total number of cases per city in
+	Colombia.
+
+	Returns
+    ----------
+    cpc : Dataframe
+    	A Dataframe that contains the total number of cases per city in Colombia
+    """
+	cpc = cases_colombia.city.value_counts().reset_index()
+	cpc.columns = ["city", "cases"]
+	return cpc
+
+def cases_per_age():
+	"""Returns a Dataframe object `cpa` of the total number of cases per age
+	group in Colombia.
+
+	Returns
+    ----------
+    cpa : Dataframe
+    	A Dataframe that contains the total number of cases per age group in
+    	Colombia
+    """
+	cpa = pd.DataFrame(cases_colombia.age.value_counts())\
+										 .rename(columns={"age" : "cases"})
+	cpa.index.name = "age group"
+	return cpa
+
+def origins_and_possible():
+	"""Returns two Series objects, `places_origin` and `possible_origin`, that
+	list the original locations of where cases came from, and the possible
+	places where some cases came from, respectively.
+
+	Returns
+    ----------
+    places_origin : Series
+    	A series that lists the original locations of where cases came from
+    possible_origins : Series
+    	A series that lists the possible places where some cases came from
+    """
+	places_origin, possible_origins = places()
+	places_origin, possible_origins = pd.Series(places_origin).reset_index(),\
+									  pd.Series(possible_origins).reset_index()
+	places_origin.columns, possible_origins.columns = ["origin", "cases"],\
+													  ["origin", "cases"]
+	return places_origin, possible_origins
+
+def total_cases_per_day():
+	"""Returns a Dataframe object `tcpd` of the total number of cases per day in
+	Colombia.
+
+	Returns
+    ----------
+    tcpd : Dataframe
+    	Dataframe with the total number of cases per day in Colombia
+    """
+	tcpd = cases_per_day()
+	total_cases = 0
+	for date, cases in tcpd.iterrows():
+		total_cases += cases
+		tcpd.at[date,'cases'] = total_cases
+	return tcpd
+
+def num_days_since_start():
+	"""Returns a Timedelta object with the number of days since the first
+	reported case in Colombia.
+    """
+	last_date = datetime.strptime(datetime.strftime(cases_colombia.date\
+						.iloc[-1], "%Y-%b-%d"), "%Y-%b-%d")
+	return last_date - colombia_first_date
+
+def resolve_progression_dicts(country, date):
+	"""Returns a list containing the progression of cases in the country
+	provided.
+
+	For countries that have had more days since their first reported case than
+	Colombia, up to two extra weeks of the progression is also returned.
+
+	Parameters
+    ----------
+    country : String
+    	A string object value of the country whose progression is being
+    	generated
+
+    date : Datetime
+    	A datetime object whose value is the first date of a reported Covid case
+    	in the country
+
+	Returns
+    ----------
+    progression_list : List
+    	A list containing the progressive increase in cases in the country
+    	provided.
+    """
+	s = cases_worldwide["Country/Region"]
+	country_index = s[s == country].index[0]
+	progression_list = []
+	for i in range(num_days_since_start().days + 14):
+		day = date + timedelta(days=i)
+		day = datetime.strftime(day, "%-m/%-d/%y")
+		if day in cases_worldwide.columns:
+			progression_list.append(cases_worldwide[day].iloc[country_index]\
+							.item())
+		else:
+			break
+	return progression_list
+
