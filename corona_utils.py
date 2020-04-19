@@ -11,7 +11,8 @@ dateparse = lambda x : datetime.strptime(x[:10], '%Y-%m-%d')
 
 cases_colombia = pd.read_csv("Casos.csv",\
 						parse_dates = ["Fecha de diagnóstico"],\
-						date_parser=dateparse)\
+						#date_parser=dateparse)\
+						)\
 					.rename(\
 		 				columns={"Fecha de diagnóstico": "date",\
 		 			 			 "Ciudad de ubicación" : "city",\
