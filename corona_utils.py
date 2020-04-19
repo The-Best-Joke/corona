@@ -1,24 +1,26 @@
 from datetime import datetime, date, timedelta
-from variables.first_dates import colombia_first_date
+from variables.first_dates import *
 import pandas as pd
+import numpy as np
 import math
 import unidecode
 import re
 
+
 dateparse = lambda x : datetime.strptime(x[:10], '%Y-%m-%d')
 
-cases_colombia = pd.read_csv("Casos.csv", 							\
-						parse_dates = ["Fecha de diagnóstico"], 	\
-						date_parser=dateparse)						\
-					.rename(										\
-		 				columns={"Fecha de diagnóstico": "date",	\
-		 			 			 "Ciudad de ubicación" : "city", 	\
-		 			 			 "Departamento" : "dept", 			\
-		 			 			 "Atención" : "locTreatment", 		\
-		 			 			 "Edad" : "age", 					\
-		 			 			 "Sexo" : "sex", 					\
-		 			 			 "Tipo*" : "type", 					\
-		 			 			 "País de procedencia" : "origin"})	\
+cases_colombia = pd.read_csv("Casos.csv",\
+						parse_dates = ["Fecha de diagnóstico"],\
+						date_parser=dateparse)\
+					.rename(\
+		 				columns={"Fecha de diagnóstico": "date",\
+		 			 			 "Ciudad de ubicación" : "city",\
+		 			 			 "Departamento" : "dept",\
+		 			 			 "Atención" : "locTreatment",\
+		 			 			 "Edad" : "age",\
+		 			 			 "Sexo" : "sex",\
+		 			 			 "Tipo*" : "type",\
+		 			 			 "País de procedencia" : "origin"})\
 					.drop('ID de caso', 1)
 
 cases_worldwide = pd.read_csv("confirmed-global.csv")
@@ -215,9 +217,9 @@ def num_days_since_start():
 						.iloc[-1], "%Y-%b-%d"), "%Y-%b-%d")
 	return last_date - colombia_first_date
 
-def resolve_progression_dicts(country, date):
-	"""Returns a list containing the progression of cases in the country
-	provided.
+def country_progression(country, date):
+	"""Returns a list `progression_list` containing the progression of cases in
+	the country provided.
 
 	For countries that have had more days since their first reported case than
 	Colombia, up to two extra weeks of the progression is also returned.
@@ -251,3 +253,37 @@ def resolve_progression_dicts(country, date):
 			break
 	return progression_list
 
+def countries_progression():
+	"""Returns a Dataframe `df` containing the progressions of all the countries
+	of interest.
+
+	Returns
+    ----------
+    df : Dataframe
+    	A dataframe of the progressions of all countries from the first day of
+    	their outbreak up until two weeks in advance of the amount of days
+    	Colombia has endured.
+    """
+	colombia_array = country_progression("Colombia", colombia_first_date)
+	italy_array = country_progression("Italy", italy_first_date)
+	spain_array = country_progression("Spain", spain_first_date)
+	peru_array = country_progression("Peru", peru_first_date)
+	ecuador_array = country_progression("Ecuador", ecuador_first_date)
+	venezuela_array = country_progression("Venezuela", venezuela_first_date)
+	brazil_array = country_progression("Brazil", brazil_first_date)
+	mexico_array = country_progression("Mexico", mexico_first_date)
+
+	data_columns = ["Colombia", "Italy", "Spain", "Peru", "Ecuador",\
+					"Venezuela", "Brazil", "Mexico"]
+
+	data = dict(Colombia = np.array(colombia_array),\
+				Italy = np.array(italy_array),\
+				Spain = np.array(spain_array),\
+				Peru = np.array(peru_array),\
+				Ecuador = np.array(ecuador_array),\
+				Venezuela = np.array(venezuela_array),\
+				Brazil = np.array(brazil_array),\
+				Mexico = np.array(mexico_array))
+
+	df = pd.DataFrame(dict([ (k,pd.Series(v)) for k,v in data.items() ]))
+	return df

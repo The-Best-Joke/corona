@@ -1,6 +1,5 @@
 from corona_utils import *
 from variables.first_dates import *
-import numpy as np
 
 # casesPerDept = data.dept.value_counts()
 # casesPerLoc = data.locTreatment.value_counts()
@@ -14,14 +13,14 @@ cases_per_age = cases_per_age()
 total_cases_per_day = total_cases_per_day()
 cases_per_origin, possible_origins_cases = origins_and_possible()
 
-progression_colombia = resolve_progression_dicts("Colombia", colombia_first_date)
-progression_italy = resolve_progression_dicts("Italy", italy_first_date)
-progression_spain = resolve_progression_dicts("Spain", spain_first_date)
-progression_peru = resolve_progression_dicts("Peru", peru_first_date)
-progression_ecuador = resolve_progression_dicts("Ecuador", ecuador_first_date)
-progression_venezuela = resolve_progression_dicts("Venezuela", venezuela_first_date)
-progression_brazil = resolve_progression_dicts("Brazil", brazil_first_date)
-progression_mexico = resolve_progression_dicts("Mexico", mexico_first_date)
+progression_colombia = country_progression("Colombia", colombia_first_date)
+progression_italy = country_progression("Italy", italy_first_date)
+progression_spain = country_progression("Spain", spain_first_date)
+progression_peru = country_progression("Peru", peru_first_date)
+progression_ecuador = country_progression("Ecuador", ecuador_first_date)
+progression_venezuela = country_progression("Venezuela", venezuela_first_date)
+progression_brazil = country_progression("Brazil", brazil_first_date)
+progression_mexico = country_progression("Mexico", mexico_first_date)
 
 # Write CSVs
 cases_per_day.to_csv("../covid-project/public/data/cases_per_day.csv")
