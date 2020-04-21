@@ -10,11 +10,11 @@ import re
 dateparse = lambda x : datetime.strptime(x[:10], '%Y-%m-%d')
 
 cases_colombia = pd.read_csv("Casos.csv",\
-						parse_dates = ["Fecha de diagnóstico"],\
+						parse_dates = ["Fecha diagnostico"],\
 						#date_parser=dateparse)\
 						)\
 					.rename(\
-		 				columns={"Fecha de diagnóstico": "date",\
+		 				columns={"Fecha diagnostico": "date",\
 		 			 			 "Ciudad de ubicación" : "city",\
 		 			 			 "Departamento" : "dept",\
 		 			 			 "Atención" : "locTreatment",\
