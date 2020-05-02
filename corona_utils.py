@@ -7,24 +7,26 @@ import unidecode
 import re
 
 
-dateparse = lambda x : datetime.strptime(x[:10], '%Y-%m-%d')
+#dateparse = lambda x : datetime.strptime(x[:10], '%Y-%m-%d')
 
 cases_colombia = pd.read_csv("Casos.csv",\
 						parse_dates = ["Fecha diagnostico"],\
 						#date_parser=dateparse)\
 						)\
 					.rename(\
-		 				columns={"Fecha diagnostico": "date",\
+		 				columns={"Fecha diagnostico" : "date",\
+		 						 "Fecha de muerte" : "date_death",\
 		 			 			 "Ciudad de ubicación" : "city",\
 		 			 			 "Departamento" : "dept",\
 		 			 			 "Atención" : "locTreatment",\
 		 			 			 "Edad" : "age",\
 		 			 			 "Sexo" : "sex",\
-		 			 			 "Tipo*" : "type",\
+		 			 			 "Tipo" : "type",\
 		 			 			 "País de procedencia" : "origin"})\
 					.drop('ID de caso', 1)
 
 cases_worldwide = pd.read_csv("confirmed-global.csv")
+deaths_worldwide = pd.read_csv("confirmed-global-deaths.csv")
 
 def places():
 	"""Handles the logic for determining whether the location is a Nan, multiple
@@ -111,29 +113,29 @@ def add_origin(places, location):
 	else:
 		places[location] = 1
 
-def fill_blank_days(cpd):
-	"""Adds missing days to the cases per day dataframe.
+def fill_blank_days(dtfrm):
+	"""Adds missing days to the provided dataframe.
 
     For all missing days, the date is filled with a corresponding 0 value.
 
     Parameters
     ----------
-    cpd : Dataframe
-    	A Dataframe object that contains the total cases per day
+    dtfrm : Dataframe
+    	A Dataframe object containing a linear (though incomplete) progression
+    	of days
 
     Returns
     ----------
-    cpd : Dataframe
-    	A Dataframe that contains the total number of cases per age group in
-    	Colombia
+    dtfrm : Dataframe
+    	A Dataframe with a clean linear progression of days
     """
-	first_date = cpd.iloc[0]
-	last_date = cpd.iloc[-1]
+	first_date = dtfrm.iloc[0]
+	last_date = dtfrm.iloc[-1]
 	date_range = pd.date_range(first_date.name, last_date.name)
-	return cpd.reindex(date_range, fill_value=0)
+	return dtfrm.reindex(date_range, fill_value=0)
 
 def cases_per_day():
-	"""Returns a Dataframe object `cpc` of the number of cases per day in
+	"""Returns a Dataframe object `cpd` of the number of cases per day in
 	Colombia.
 
 	Returns
@@ -146,6 +148,24 @@ def cases_per_day():
 	cpd = fill_blank_days(cpd)
 	cpd.index.name = "date"
 	return cpd
+
+def deaths_per_day():
+	"""Returns a Dataframe object `dpd` of the number of deaths per day in
+	Colombia.
+
+	Returns
+    ----------
+    dpd : Dataframe
+    	A Dataframe that contains the total number of deaths per day in Colombia
+    """
+	dpd = pd.DataFrame(cases_colombia.date_death.value_counts()).sort_index()\
+									 .rename(columns={"date_death" : "deaths"})
+	dpd = dpd.iloc[1:]
+	dpd.index = pd.to_datetime(pd.to_datetime(dpd.index).strftime('%Y-%m-%d'))
+	dpd = fill_blank_days(dpd)
+	dpd.index.name = "date"
+	return dpd
+deaths_per_day()
 
 def cases_per_city():
 	"""Returns a Dataframe object `cpc` of the total number of cases per city in
@@ -210,7 +230,23 @@ def total_cases_per_day():
 		tcpd.at[date,'cases'] = total_cases
 	return tcpd
 
-def num_days_since_start():
+def total_deaths_per_day():
+	"""Returns a Dataframe object `tdpd` of the total number of cases per day in
+	Colombia.
+
+	Returns
+    ----------
+    tdpd : Dataframe
+    	Dataframe with the total number of deaths per day in Colombia
+    """
+	tdpd = deaths_per_day()
+	total_deaths = 0
+	for date, deaths in tdpd.iterrows():
+		total_deaths += deaths
+		tdpd.at[date,'deaths'] = total_deaths
+	return tdpd
+
+def days_since_first_case():
 	"""Returns a Timedelta object with the number of days since the first
 	reported case in Colombia.
     """
@@ -218,7 +254,14 @@ def num_days_since_start():
 						.iloc[-1], "%Y-%b-%d"), "%Y-%b-%d")
 	return last_date - colombia_first_date
 
-def country_progression(country, date):
+def days_since_first_death():
+	"""Returns a Timedelta object with the number of days since the first
+	reported death in Colombia.
+    """
+	last_death_date = datetime.strptime(deaths_worldwide[deaths_worldwide.columns[-1]].name, "%m/%d/%y")
+	return last_death_date - colombia_first_death_date
+
+def country_cases_progression(country, date):
 	"""Returns a list `progression_list` containing the progression of cases in
 	the country provided.
 
@@ -239,12 +282,12 @@ def country_progression(country, date):
     ----------
     progression_list : List
     	A list containing the progressive increase in cases in the country
-    	provided.
+    	provided
     """
 	s = cases_worldwide["Country/Region"]
 	country_index = s[s == country].index[0]
 	progression_list = []
-	for i in range(num_days_since_start().days + 14):
+	for i in range(days_since_first_case().days + 14):
 		day = date + timedelta(days=i)
 		day = datetime.strftime(day, "%-m/%-d/%y")
 		if day in cases_worldwide.columns:
@@ -254,9 +297,45 @@ def country_progression(country, date):
 			break
 	return progression_list
 
-def countries_progression():
-	"""Returns a Dataframe `df` containing the progressions of all the countries
-	of interest.
+def country_deaths_progression(country, date):
+	"""Returns a list `progression_list` containing the progression of deaths in
+	the country provided.
+
+	For countries that have had more days since their first reported death than
+	Colombia, up to two extra weeks of the progression is also returned.
+
+	Parameters
+    ----------
+    country : String
+    	A string object value of the country whose progression is being
+    	generated
+
+    date : Datetime
+    	A datetime object whose value is the first date of a reported Covid 
+    	death in the country
+
+	Returns
+    ----------
+    progression_list : List
+    	A list containing the progressive increase in deaths in the country
+    	provided
+    """
+	s = deaths_worldwide["Country/Region"]
+	country_index = s[s == country].index[0]
+	progression_list = []
+	for i in range(days_since_first_death().days + 14):
+		day = date + timedelta(days=i)
+		day = datetime.strftime(day, "%-m/%-d/%y")
+		if day in deaths_worldwide.columns:
+			progression_list.append(deaths_worldwide[day].iloc[country_index]\
+							.item())
+		else:
+			break
+	return progression_list
+
+def countries_cases_progression():
+	"""Returns a Dataframe `df` containing the progressions of cases of all the
+	countries of interest.
 
 	Returns
     ----------
@@ -265,23 +344,68 @@ def countries_progression():
     	their outbreak up until two weeks in advance of the amount of days
     	Colombia has endured.
     """
-	colombia_array = country_progression("Colombia", colombia_first_date)
-	italy_array = country_progression("Italy", italy_first_date)
-	spain_array = country_progression("Spain", spain_first_date)
-	peru_array = country_progression("Peru", peru_first_date)
-	ecuador_array = country_progression("Ecuador", ecuador_first_date)
-	venezuela_array = country_progression("Venezuela", venezuela_first_date)
-	brazil_array = country_progression("Brazil", brazil_first_date)
-	mexico_array = country_progression("Mexico", mexico_first_date)
+	colombia_array = country_cases_progression("Colombia", colombia_first_date)
+	italy_array = country_cases_progression("Italy", italy_first_date)
+	spain_array = country_cases_progression("Spain", spain_first_date)
+	peru_array = country_cases_progression("Peru", peru_first_date)
+	ecuador_array = country_cases_progression("Ecuador", ecuador_first_date)
+	argentina_array = country_cases_progression("Argentina", argentina_first_date)
+	chile_array = country_cases_progression("Chile", chile_first_date)
+	venezuela_array = country_cases_progression("Venezuela", venezuela_first_date)
+	brazil_array = country_cases_progression("Brazil", brazil_first_date)
+	mexico_array = country_cases_progression("Mexico", mexico_first_date)
 
 	data_columns = ["Colombia", "Italy", "Spain", "Peru", "Ecuador",\
-					"Venezuela", "Brazil", "Mexico"]
+					"Argentina", "Chile", "Venezuela", "Brazil", "Mexico"]
 
 	data = dict(Colombia = np.array(colombia_array),\
 				Italy = np.array(italy_array),\
 				Spain = np.array(spain_array),\
 				Peru = np.array(peru_array),\
 				Ecuador = np.array(ecuador_array),\
+				Argentina = np.array(argentina_array),\
+				Chile = np.array(chile_array),\
+				Venezuela = np.array(venezuela_array),\
+				Brazil = np.array(brazil_array),\
+				Mexico = np.array(mexico_array))
+
+	df = pd.DataFrame(dict([ (k,pd.Series(v)) for k,v in data.items() ]))
+	df.index.name = "day"
+	df.index += 1
+	return df
+
+def countries_deaths_progression():
+	"""Returns a Dataframe `df` containing the progressions of deaths of all the
+	countries of interest.
+
+	Returns
+    ----------
+    df : Dataframe
+    	A dataframe of the progressions of deaths of all countries from the
+    	first day of a reported death up until two weeks in advance of the
+    	amount of days Colombia has endured.
+    """
+	colombia_array = country_deaths_progression("Colombia", colombia_first_death_date)
+	italy_array = country_deaths_progression("Italy", italy_first_death_date)
+	spain_array = country_deaths_progression("Spain", spain_first_death_date)
+	peru_array = country_deaths_progression("Peru", peru_first_death_date)
+	ecuador_array = country_deaths_progression("Ecuador", ecuador_first_death_date)
+	argentina_array = country_deaths_progression("Argentina", argentina_first_death_date)
+	chile_array = country_deaths_progression("Chile", chile_first_death_date)
+	venezuela_array = country_deaths_progression("Venezuela", venezuela_first_death_date)
+	brazil_array = country_deaths_progression("Brazil", brazil_first_death_date)
+	mexico_array = country_deaths_progression("Mexico", mexico_first_death_date)
+
+	data_columns = ["Colombia", "Italy", "Spain", "Peru", "Ecuador",\
+					"Argentina", "Chile", "Venezuela", "Brazil", "Mexico"]
+
+	data = dict(Colombia = np.array(colombia_array),\
+				Italy = np.array(italy_array),\
+				Spain = np.array(spain_array),\
+				Peru = np.array(peru_array),\
+				Ecuador = np.array(ecuador_array),\
+				Argentina = np.array(argentina_array),\
+				Chile = np.array(chile_array),\
 				Venezuela = np.array(venezuela_array),\
 				Brazil = np.array(brazil_array),\
 				Mexico = np.array(mexico_array))
