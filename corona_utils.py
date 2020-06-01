@@ -14,7 +14,7 @@ cases_colombia = pd.read_csv("Casos.csv",\
 						#date_parser=dateparse)\
 						)\
 					.rename(\
-		 				columns={"Fecha diagnostico" : "date",\
+		 				columns={"Fecha de notificación" : "date",\
 		 						 "Fecha de muerte" : "date_death",\
 		 			 			 "Ciudad de ubicación" : "city",\
 		 			 			 "Departamento" : "dept",\
@@ -143,10 +143,17 @@ def cases_per_day():
     cpd : Dataframe
     	A Dataframe that contains the total number of cases per day in Colombia
     """
-	cpd = pd.DataFrame(cases_colombia.date.value_counts()).sort_index()\
-										  .rename(columns={"date" : "cases"})
-	cpd = fill_blank_days(cpd)
-	cpd.index.name = "date"
+	s = cases_worldwide["Country/Region"]
+	country_index = s[s == "Colombia"].index[0]
+	date_cases = {}
+	past_cases = 0
+	for i in range(days_since_first_case().days + 1):
+		day = colombia_first_date + timedelta(days=i)
+		day = datetime.strftime(day, "%-m/%-d/%y")
+		curr_cases = cases_worldwide[day].iloc[country_index].item()
+		date_cases[day] = curr_cases - past_cases
+		past_cases = curr_cases
+	cpd = pd.DataFrame(date_cases.items(), columns=['date', 'cases'])
 	return cpd
 
 def deaths_per_day():
@@ -158,14 +165,18 @@ def deaths_per_day():
     dpd : Dataframe
     	A Dataframe that contains the total number of deaths per day in Colombia
     """
-	dpd = pd.DataFrame(cases_colombia.date_death.value_counts()).sort_index()\
-									 .rename(columns={"date_death" : "deaths"})
-	dpd = dpd.iloc[1:]
-	dpd.index = pd.to_datetime(pd.to_datetime(dpd.index).strftime('%Y-%m-%d'))
-	dpd = fill_blank_days(dpd)
-	dpd.index.name = "date"
+	s = deaths_worldwide["Country/Region"]
+	country_index = s[s == "Colombia"].index[0]
+	date_deaths = {}
+	past_cases = 0
+	for i in range(days_since_first_death().days + 1):
+		day = colombia_first_death_date + timedelta(days=i)
+		day = datetime.strftime(day, "%-m/%-d/%y")
+		curr_cases = deaths_worldwide[day].iloc[country_index].item()
+		date_deaths[day] = curr_cases - past_cases
+		past_cases = curr_cases
+	dpd = pd.DataFrame(date_deaths.items(), columns=['date', 'deaths'])
 	return dpd
-deaths_per_day()
 
 def cases_per_city():
 	"""Returns a Dataframe object `cpc` of the total number of cases per city in
@@ -223,42 +234,51 @@ def total_cases_per_day():
     tcpd : Dataframe
     	Dataframe with the total number of cases per day in Colombia
     """
-	tcpd = cases_per_day()
-	total_cases = 0
-	for date, cases in tcpd.iterrows():
-		total_cases += cases
-		tcpd.at[date,'cases'] = total_cases
+	s = cases_worldwide["Country/Region"]
+	country_index = s[s == "Colombia"].index[0]
+	date_cases = {}
+	for i in range(days_since_first_case().days + 1):
+		day = colombia_first_date + timedelta(days=i)
+		day = datetime.strftime(day, "%-m/%-d/%y")
+		curr_cases = cases_worldwide[day].iloc[country_index].item()
+		date_cases[day] = curr_cases
+	tcpd = pd.DataFrame(date_cases.items(), columns=['date', 'cases'])
 	return tcpd
 
 def total_deaths_per_day():
-	"""Returns a Dataframe object `tdpd` of the total number of cases per day in
-	Colombia.
+	"""Returns a Dataframe object `tdpd` of the total number of deaths per day
+	in Colombia.
 
 	Returns
     ----------
     tdpd : Dataframe
     	Dataframe with the total number of deaths per day in Colombia
     """
-	tdpd = deaths_per_day()
-	total_deaths = 0
-	for date, deaths in tdpd.iterrows():
-		total_deaths += deaths
-		tdpd.at[date,'deaths'] = total_deaths
+	s = deaths_worldwide["Country/Region"]
+	country_index = s[s == "Colombia"].index[0]
+	date_deaths = {}
+	for i in range(days_since_first_death().days + 1):
+		day = colombia_first_death_date + timedelta(days=i)
+		day = datetime.strftime(day, "%-m/%-d/%y")
+		curr_cases = deaths_worldwide[day].iloc[country_index].item()
+		date_deaths[day] = curr_cases
+	tdpd = pd.DataFrame(date_deaths.items(), columns=['date', 'deaths'])
 	return tdpd
 
 def days_since_first_case():
 	"""Returns a Timedelta object with the number of days since the first
 	reported case in Colombia.
     """
-	last_date = datetime.strptime(datetime.strftime(cases_colombia.date\
-						.iloc[-1], "%Y-%b-%d"), "%Y-%b-%d")
+	last_date = datetime.strptime(cases_worldwide[cases_worldwide.columns[-1]]\
+		.name, "%m/%d/%y")
 	return last_date - colombia_first_date
 
 def days_since_first_death():
 	"""Returns a Timedelta object with the number of days since the first
 	reported death in Colombia.
     """
-	last_death_date = datetime.strptime(deaths_worldwide[deaths_worldwide.columns[-1]].name, "%m/%d/%y")
+	last_death_date = datetime.strptime(deaths_worldwide[deaths_worldwide\
+		.columns[-1]].name, "%m/%d/%y")
 	return last_death_date - colombia_first_death_date
 
 def country_cases_progression(country, date):
