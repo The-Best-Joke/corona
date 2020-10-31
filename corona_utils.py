@@ -69,18 +69,18 @@ from variables.first_dates import chile_first_death_date
 
 #dateparse = lambda x : datetime.strptime(x[:10], '%Y-%m-%d')
 
-cases_colombia = pd.read_csv("Casos.csv", parse_dates = ["Fecha diagnostico"])\
-    .rename(
+cases_colombia = pd.read_csv("Casos.csv",
+    parse_dates = ["Fecha de diagnóstico"]).rename(
         columns = {
             "Fecha de notificación" : "date",
             "Fecha de muerte" : "date_death",
-            "Ciudad de ubicación" : "city",
+            "Nombre municipio" : "city",
             "Departamento" : "dept",
             "Atención" : "locTreatment",
             "Edad" : "age",
             "Sexo" : "sex",
             "Tipo" : "type",
-            "País de procedencia" : "origin"
+            "Nombre del país" : "origin"
         }
     ).drop('ID de caso', 1)
 
