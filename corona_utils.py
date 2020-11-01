@@ -521,7 +521,7 @@ def cities_cases_per_day():
     for city in cities:
         city_cases_df = __city_cases_per_day(city)
         city_cases_df.to_csv("../covid-in-colombia/data/cities/cases/per_day/"
-            + city + ".csv")
+            + city.lower() + ".csv")
 
 def cities_cases_progression():
     """Writes a csv file for each Series representing the cumulative cases per
@@ -535,7 +535,7 @@ def cities_cases_progression():
     for city in cities:
         city_cases_df = __city_cases_progression(city)
         city_cases_df.to_csv("../covid-in-colombia/data/cities/cases/total/"
-            + city + ".csv")
+            + city.lower() + ".csv")
 
 def cities_deaths_per_day():
     """Writes a csv file for each Series representing the cases per day of every
@@ -549,7 +549,7 @@ def cities_deaths_per_day():
     for city in cities:
         city_deaths_df = __city_deaths_per_day(city)
         city_deaths_df.to_csv("../covid-in-colombia/data/cities/deaths/per_day/"
-            + city + ".csv")
+            + city.lower() + ".csv")
 
 def cities_deaths_progression():
     """Writes a csv file for each Series representing the cumulative deaths per
@@ -563,7 +563,7 @@ def cities_deaths_progression():
     for city in cities:
         city_deaths_df = __city_deaths_progression(city)
         city_deaths_df.to_csv("../covid-in-colombia/data/cities/deaths/total/"
-            + city + ".csv")
+            + city.lower() + ".csv")
 
 def countries_cases_progression():
     """Returns a Dataframe `dataframe` containing the progressions of cases of
