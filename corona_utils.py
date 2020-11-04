@@ -273,7 +273,7 @@ def cases_per_age():
         Colombia
     """
     cpa = pd.DataFrame(cases_colombia.age.value_counts())\
-                                         .rename(columns={"age" : "cases"})
+        .rename(columns={"age" : "cases"})
     cpa.index.name = "age group"
     return cpa
 
@@ -344,7 +344,7 @@ def __days_since_first_case():
     ----------
     Timedelta
     """
-    last_date = datetime.strptime(cases_worldwide[cases_worldwide.columns[-1]]\
+    last_date = datetime.strptime(cases_worldwide[cases_worldwide.columns[-1]]
         .name, "%m/%d/%y")
     return last_date - colombia_first_date
 
@@ -356,7 +356,7 @@ def __days_since_first_death():
     ----------
     Timedelta
     """
-    last_death_date = datetime.strptime(deaths_worldwide[deaths_worldwide\
+    last_death_date = datetime.strptime(deaths_worldwide[deaths_worldwide
         .columns[-1]].name, "%m/%d/%y")
     return last_death_date - colombia_first_death_date
 
@@ -374,8 +374,8 @@ def __city_cases_per_day(city):
     ccpd : Series
         A Series that contains the cases per day in the city
     """
-    ccpd = cases_colombia[(cases_colombia["city"] == city) &\
-                         cases_colombia["date_death"].isnull()]
+    ccpd = cases_colombia[(cases_colombia["city"] == city)
+        & cases_colombia["date_death"].isnull()]
     ccpd = ccpd[["date", "city"]]
     ccpd = ccpd.date.value_counts().sort_index()
     return ccpd
@@ -428,8 +428,8 @@ def __country_cases_progression(country, date):
         day = date + timedelta(days=i)
         day = datetime.strftime(day, "%-m/%-d/%y")
         if day in cases_worldwide.columns:
-            progression_list.append(cases_worldwide[day].iloc[country_index]\
-                            .item())
+            progression_list.append(cases_worldwide[day]
+                .iloc[country_index].item())
         else:
             break
     return progression_list
@@ -449,8 +449,8 @@ def __city_deaths_per_day(city):
     cdpd : Series
         A Series that contains the deaths per day in the city
     """
-    cdpd = cases_colombia[(cases_colombia["city"] == city) &\
-                         cases_colombia["date_death"].notnull()]
+    cdpd = cases_colombia[(cases_colombia["city"] == city)
+        & cases_colombia["date_death"].notnull()]
     cdpd = cdpd[["date", "city"]]
     cdpd = cdpd.date.value_counts().sort_index()
     return cdpd
@@ -503,8 +503,8 @@ def __country_deaths_progression(country, date):
         day = date + timedelta(days=i)
         day = datetime.strftime(day, "%-m/%-d/%y")
         if day in deaths_worldwide.columns:
-            progression_list.append(deaths_worldwide[day].iloc[country_index]\
-                            .item())
+            progression_list.append(deaths_worldwide[day]
+                .iloc[country_index].item())
         else:
             break
     return progression_list
@@ -519,9 +519,10 @@ def cities_cases_per_day():
     """
     cities = cases_colombia.city.unique()
     for city in cities:
-        city_cases_df = __city_cases_per_day(city)
-        city_cases_df.to_csv("../covid-in-colombia/data/cities/cases/per_day/"
-            + city.lower() + ".csv")
+        city_cases = __city_cases_per_day(city)
+        city_cases.index.name = "date"
+        city_cases.to_csv("../covid-in-colombia/data/cities/cases/per_day/"
+            + city.lower() + ".csv", header=["cases"])
 
 def cities_cases_progression():
     """Writes a csv file for each Series representing the cumulative cases per
@@ -533,9 +534,11 @@ def cities_cases_progression():
     """
     cities = cases_colombia.city.unique()
     for city in cities:
-        city_cases_df = __city_cases_progression(city)
-        city_cases_df.to_csv("../covid-in-colombia/data/cities/cases/total/"
-            + city.lower() + ".csv")
+        city_cases = __city_cases_progression(city)
+        city_cases.index.name = "date"
+        city_cases.rename("cases")
+        city_cases.to_csv("../covid-in-colombia/data/cities/cases/total/"
+            + city.lower() + ".csv", header=["cases"])
 
 def cities_deaths_per_day():
     """Writes a csv file for each Series representing the cases per day of every
@@ -547,9 +550,11 @@ def cities_deaths_per_day():
     """
     cities = cases_colombia.city.unique()
     for city in cities:
-        city_deaths_df = __city_deaths_per_day(city)
-        city_deaths_df.to_csv("../covid-in-colombia/data/cities/deaths/per_day/"
-            + city.lower() + ".csv")
+        city_deaths = __city_deaths_per_day(city)
+        city_deaths.index.name = "date"
+        city_deaths.rename("deaths")
+        city_deaths.to_csv("../covid-in-colombia/data/cities/deaths/per_day/"
+            + city.lower() + ".csv", header=["deaths"])
 
 def cities_deaths_progression():
     """Writes a csv file for each Series representing the cumulative deaths per
@@ -561,9 +566,11 @@ def cities_deaths_progression():
     """
     cities = cases_colombia.city.unique()
     for city in cities:
-        city_deaths_df = __city_deaths_progression(city)
-        city_deaths_df.to_csv("../covid-in-colombia/data/cities/deaths/total/"
-            + city.lower() + ".csv")
+        city_deaths = __city_deaths_progression(city)
+        city_deaths.index.name = "date"
+        city_deaths.rename("deaths")
+        city_deaths.to_csv("../covid-in-colombia/data/cities/deaths/total/"
+            + city.lower() + ".csv", header=["deaths"])
 
 def countries_cases_progression():
     """Returns a Dataframe `dataframe` containing the progressions of cases of
