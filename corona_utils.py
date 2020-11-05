@@ -377,7 +377,9 @@ def __city_cases_per_day(city):
     ccpd = cases_colombia[(cases_colombia["city"] == city)
         & cases_colombia["date_death"].isnull()]
     ccpd = ccpd[["date", "city"]]
-    ccpd = ccpd.date.value_counts().sort_index()
+    ccpd = ccpd.date.value_counts()
+    ccpd.index = pd.to_datetime(ccpd.index, format="%d/%m/%Y %H:%M:%S")
+    ccpd = ccpd.sort_index()
     return ccpd
 
 def __city_cases_progression(city):
@@ -392,7 +394,7 @@ def __city_cases_progression(city):
 
     Returns
     ----------
-    cccp : Series
+    ccp : Series
         A Series that contains the cumulative progression of cases in the city
     """
     ccp = __city_cases_per_day(city).cumsum()
@@ -452,7 +454,9 @@ def __city_deaths_per_day(city):
     cdpd = cases_colombia[(cases_colombia["city"] == city)
         & cases_colombia["date_death"].notnull()]
     cdpd = cdpd[["date", "city"]]
-    cdpd = cdpd.date.value_counts().sort_index()
+    cdpd = cdpd.date.value_counts()
+    cdpd.index = pd.to_datetime(cdpd.index, format="%d/%m/%Y %H:%M:%S")
+    cdpd = cdpd.sort_index()
     return cdpd
 
 def __city_deaths_progression(city):
@@ -467,7 +471,7 @@ def __city_deaths_progression(city):
 
     Returns
     ----------
-    cccp : Series
+    cdp : Series
         A Series that contains the cumulative progression of deaths in the city
     """
     cdp = __city_deaths_per_day(city).cumsum()
@@ -521,9 +525,6 @@ def cities_cases_per_day():
     for city in cities:
         city_cases = __city_cases_per_day(city)
         city_cases.index.name = "date"
-        city_cases.index = pd.to_datetime(city_cases.index,
-            format="%d/%m/%Y %H:%M:%S")
-        city_cases = city_cases.sort_index()
         city_cases.to_csv("../covid-in-colombia/data/cities/cases/per_day/"
             + city.lower() + ".csv", header=["cases"])
 
@@ -539,9 +540,6 @@ def cities_cases_progression():
     for city in cities:
         city_cases = __city_cases_progression(city)
         city_cases.index.name = "date"
-        city_cases.index = pd.to_datetime(city_cases.index,
-            format="%d/%m/%Y %H:%M:%S")
-        city_cases = city_cases.sort_index()
         city_cases.to_csv("../covid-in-colombia/data/cities/cases/total/"
             + city.lower() + ".csv", header=["cases"])
 
@@ -557,9 +555,6 @@ def cities_deaths_per_day():
     for city in cities:
         city_deaths = __city_deaths_per_day(city)
         city_deaths.index.name = "date"
-        city_deaths.index = pd.to_datetime(city_deaths.index,
-            format="%d/%m/%Y %H:%M:%S")
-        city_deaths = city_deaths.sort_index()
         city_deaths.to_csv("../covid-in-colombia/data/cities/deaths/per_day/"
             + city.lower() + ".csv", header=["deaths"])
 
@@ -575,9 +570,6 @@ def cities_deaths_progression():
     for city in cities:
         city_deaths = __city_deaths_progression(city)
         city_deaths.index.name = "date"
-        city_deaths.index = pd.to_datetime(city_deaths.index,
-            format="%d/%m/%Y %H:%M:%S")
-        city_deaths = city_deaths.sort_index()
         city_deaths.to_csv("../covid-in-colombia/data/cities/deaths/total/"
             + city.lower() + ".csv", header=["deaths"])
 
